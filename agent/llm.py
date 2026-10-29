@@ -1,9 +1,10 @@
 import time
 from langchain_openai import ChatOpenAI
-#from openai import RateLimitError, InternalServerError
+from openai import RateLimitError, InternalServerError, APIConnectionError
 from dotenv import load_dotenv
 load_dotenv()
 import os
+from tools.tool_registry import tools
 
 MODEL='openai/gpt-oss-120b'
 
@@ -16,8 +17,22 @@ passive_llm=ChatOpenAI(
 )
 active_llm=passive_llm.bind_tools(tools)
 
-def call_llm(message):
-    response = active_llm.invoke(message)
-    return response,response.response_metadata['token_usage']
-if '__main__' == __name__:
-    pass
+class LLMError(Exception):
+    """Raised when the model call fails for good."""
+
+RETRYABLE = (RateLimitError, InternalServerError, APIConnectionError)
+
+def call_llm(messages, retries=3):
+    for attempt in range(retries + 1):
+        try:
+            response = active_llm.invoke(messages)
+            break
+        except RETRYABLE as e:
+            if attempt == retries:
+                raise LLMError(f"LLM unavailable after {retries + 1} attempts: {e}") from e
+            time.sleep(2 ** attempt)   # wait 1s, 2s, 4s
+        except Exception as e:
+            raise LLMError(f"LLM call failed: {e}") from e
+
+    usage = (response.response_metadata or {}).get("token_usage", {})
+    return response, usage
