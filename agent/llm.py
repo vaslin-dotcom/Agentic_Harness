@@ -1,10 +1,9 @@
 import time
 from langchain_openai import ChatOpenAI
-from openai import RateLimitError, InternalServerError
+#from openai import RateLimitError, InternalServerError
 from dotenv import load_dotenv
 load_dotenv()
 import os
-from tools import tools
 
 MODEL='openai/gpt-oss-120b'
 

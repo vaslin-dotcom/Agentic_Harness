@@ -10,27 +10,18 @@ def preview(text, limit=500):
     text = str(text)
     return text if len(text) <= limit else text[:limit] + f"... [{len(text) - limit} more chars]"
 
-while True:
-    human_message = input('HUMAN : ')
-    if human_message.strip().lower() == 'exit':
-        break
-    messages.append(HumanMessage(content=human_message))
-
-    step = 0
-    while True:
-        step += 1
+def loop(messages, max_step=10):
+    for step in range(1, max_step + 1):
         ai_message, usage = call_llm(messages)
         messages.append(ai_message)
 
         print(f"\n--- Step {step} | tokens: {usage.get('total_tokens')} ---")
-
         if ai_message.content:
             print("AI_MESSAGE :", ai_message.content)
 
         if not ai_message.tool_calls:
             print("--- done ---\n")
             break
-
 
         for tool_call in ai_message.tool_calls:
             print(f"[TOOL CALL] {tool_call['name']}({tool_call['args']})")
@@ -42,3 +33,15 @@ while True:
             messages.append(
                 ToolMessage(content=str(result), tool_call_id=tool_call['id'])
             )
+    return "max_steps"
+
+while True:
+    human_message = input('HUMAN : ')
+    if human_message.strip().lower() == 'exit':
+        break
+    messages.append(HumanMessage(content=human_message))
+    reason = loop(messages)
+    if reason == "max_steps":
+        print("Step limit reached. Say 'continue' to let the agent keep going.")
+
+
