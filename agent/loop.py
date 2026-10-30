@@ -2,6 +2,7 @@ from langchain_core.messages import ToolMessage, SystemMessage, HumanMessage
 from agent.context import build_system_prompt
 from agent.llm import call_llm, LLMError
 from tools.tool_registry import tool_map
+from agent.context_management import build_view
 
 
 def preview(text, limit=500):
@@ -12,13 +13,15 @@ def preview(text, limit=500):
 def loop(messages, max_step=10):
     for step in range(1, max_step + 1):
         try:
-            ai_message, usage = call_llm(messages)
+            view = build_view(messages)
+            print("Message: ",sum(len(str(m.content)) for m in messages), "View: ",sum(len(str(m.content)) for m in view))
+            ai_message, usage = call_llm(view)
         except LLMError as e:
             print(f"[LLM ERROR] {e}")
             return "error"
         messages.append(ai_message)
 
-        print(f"\n--- Step {step} | tokens: {usage.get('total_tokens')} ---")
+        print(f"\n--- Step {step} | context: {usage.get('prompt_tokens')} | reply: {usage.get('completion_tokens')} ---")
         if ai_message.content:
             print("AI_MESSAGE :", ai_message.content)
 
